@@ -4,9 +4,14 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
-  base: "/loval-school-portal/",   // ضروري لـ GitHub Pages
+  // مهم لأن المشروع يُنشر تحت المسار الفرعي /loval-school-portal/
+  base: "/loval-school-portal/",
 
   server: { host: "::", port: 8080 },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
-  resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 }));
