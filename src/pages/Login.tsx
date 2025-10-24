@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase, UserRole } from '@/lib/supabase';
@@ -64,7 +65,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // استخدم BASE_URL من Vite ليشمل المسار الفرعي /loval-school-portal/
+      const redirectUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
       
       const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
