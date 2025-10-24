@@ -4,7 +4,7 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
-  base: "/loval-school-portal/",   // ← مهم لـ GitHub Pages
+  base: "/loval-school-portal/",   // ضروري لـ GitHub Pages
 
   server: { host: "::", port: 8080 },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
