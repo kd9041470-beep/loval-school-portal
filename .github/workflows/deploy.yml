@@ -2,11 +2,11 @@ name: Deploy Vite app to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [main]   # ينشر تلقائياً عند أي push على main
+  workflow_dispatch:    # ويسمح لك بالتشغيل اليدوي
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -18,21 +18,31 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
+
+      - name: Install deps
+        run: npm install
+
       - name: Build
         env:
+          # مفاتيح Vite تأتي من بيئة الـAction (متوفرة لديك)
           VITE_SUPABASE_URL: https://nytusadzlvtegtsynxuc.supabase.co
           VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55dHVzYWR6bHZ0ZWd0c3lueHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTY2MzYsImV4cCI6MjA3NTc3MjYzNn0.iJYc7tae4sgeSTzG8m8whr_1W7gnbMJiPjMqNDfOHW0
         run: |
           npm run build
+          # لتأمين SPA عند تحديث الروابط على Pages
           cp dist/index.html dist/404.html
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: dist
 
   deploy:
     needs: build
@@ -40,6 +50,11 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
+
