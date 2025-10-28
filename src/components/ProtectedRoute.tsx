@@ -22,17 +22,21 @@ export const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  if (!user || !profile) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  // إن كان الحساب لم يُفعّل بعد
+if (profile.role === 'pending') {
+  return <Navigate to={'/activate'} replace />;
+}
+
 
   if (allowedRoles && !allowedRoles.includes(profile.role)) {
     // Redirect to appropriate dashboard based on role
-    const redirectMap: Record<UserRole, string> = {
-      admin: '/admin/dashboard',
-      teacher: '/teacher/dashboard',
-      student: '/student/dashboard',
-    };
+   const redirectMap: Record<UserRole, string> = {
+  admin: '/admin/dashboard',
+  teacher: '/teacher/dashboard',
+  student: '/student/dashboard',
+  pending: '/activate',
+};
+
     return <Navigate to={redirectMap[profile.role]} replace />;
   }
 
