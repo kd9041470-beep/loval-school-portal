@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase, UserRole } from '@/lib/supabase';
@@ -8,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { GraduationCap } from 'lucide-react';
 
@@ -19,8 +17,7 @@ const Login = () => {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupFullName, setSignupFullName] = useState('');
-  const [signupRole, setSignupRole] = useState<'student' | 'teacher'>('student');
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
@@ -32,8 +29,10 @@ const Login = () => {
         admin: '/admin/dashboard',
         teacher: '/teacher/dashboard',
         student: '/student/dashboard',
+        pending: '/activate', // مهم: المستخدم غير المفعَّل يذهب لصفحة التفعيل
       };
-      navigate(from || redirectMap[profile.role], { replace: true });
+      const to = from || redirectMap[profile.role];
+      if (to) navigate(to, { replace: true });
     }
   }, [user, profile, navigate, location]);
 
@@ -65,28 +64,34 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // استخدم BASE_URL من Vite ليشمل المسار الفرعي /loval-school-portal/
-      const redirectUrl = `${window.location.origin}${import.meta.env.BASE_URL}`;
-      
+      // تسجيل بدون أكواد خارجية، والدور لا يختاره المستخدم
       const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
         options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: signupFullName,
-            role: signupRole,
-          },
+          // لا نرسل روابط تفعيل بريد
+          data: { full_name: signupFullName },
         },
       });
 
       if (error) throw error;
 
+      // إنشاء صف في profiles بدور pending
       if (data.user) {
-        toast.success('تم إنشاء الحساب بنجاح! يمكنك تسجيل الدخول الآن');
-        // Switch to login tab
-        const loginTab = document.querySelector('[value="login"]') as HTMLElement;
-        loginTab?.click();
+        const { error: upsertErr } = await supabase.from('profiles').upsert(
+          {
+            id: data.user.id,
+            full_name: signupFullName,
+            email: signupEmail,
+            role: 'pending',
+          },
+          { onConflict: 'id' }
+        );
+        if (upsertErr) throw upsertErr;
+
+        toast.success('تم إنشاء الحساب بنجاح! يرجى تفعيل الصلاحية.');
+        // توجيه المستخدم مباشرة لصفحة تفعيل كود الدعوة
+        navigate('/activate', { replace: true });
       }
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -112,7 +117,7 @@ const Login = () => {
               <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
               <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -142,7 +147,7 @@ const Login = () => {
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
@@ -179,18 +184,9 @@ const Login = () => {
                     minLength={6}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-role">الدور</Label>
-                  <Select value={signupRole} onValueChange={(value: 'student' | 'teacher') => setSignupRole(value)}>
-                    <SelectTrigger id="signup-role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="student">طالب</SelectItem>
-                      <SelectItem value="teacher">معلم</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                {/* لا يوجد اختيار للدور هنا، الدور يُضبط كـ pending تلقائيًا */}
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
                 </Button>
@@ -204,3 +200,4 @@ const Login = () => {
 };
 
 export default Login;
+
