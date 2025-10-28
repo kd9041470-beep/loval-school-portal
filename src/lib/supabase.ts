@@ -9,8 +9,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   },
 });
+export type UserRole = 'admin' | 'teacher' | 'student' | 'pending';
 
-export type UserRole = 'admin' | 'teacher' | 'student';
 
 export interface Profile {
   id: string;
