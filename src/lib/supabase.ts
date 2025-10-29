@@ -19,3 +19,4 @@ export interface Profile {
   role: UserRole;
   created_at: string;
 }
+
