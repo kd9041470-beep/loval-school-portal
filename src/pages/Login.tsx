@@ -1,6 +1,7 @@
+// src/pages/Login.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase, UserRole } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,13 +26,13 @@ const Login = () => {
   useEffect(() => {
     if (user && profile) {
       const from = (location.state as any)?.from?.pathname;
-      const redirectMap: Record<UserRole, string> = {
+      const redirectMap: Record<string, string> = {
         admin: '/admin/dashboard',
         teacher: '/teacher/dashboard',
         student: '/student/dashboard',
-        pending: '/activate', // مهم: المستخدم غير المفعَّل يذهب لصفحة التفعيل
+        pending: '/activate',
       };
-      const to = from || redirectMap[profile.role];
+      const to = from || redirectMap[profile.role as string];
       if (to) navigate(to, { replace: true });
     }
   }, [user, profile, navigate, location]);
@@ -64,19 +65,16 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // تسجيل بدون أكواد خارجية، والدور لا يختاره المستخدم
       const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
         options: {
-          // لا نرسل روابط تفعيل بريد
           data: { full_name: signupFullName },
         },
       });
 
       if (error) throw error;
 
-      // إنشاء صف في profiles بدور pending
       if (data.user) {
         const { error: upsertErr } = await supabase.from('profiles').upsert(
           {
@@ -90,7 +88,6 @@ const Login = () => {
         if (upsertErr) throw upsertErr;
 
         toast.success('تم إنشاء الحساب بنجاح! يرجى تفعيل الصلاحية.');
-        // توجيه المستخدم مباشرة لصفحة تفعيل كود الدعوة
         navigate('/activate', { replace: true });
       }
     } catch (error: any) {
@@ -113,9 +110,10 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
               <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
+              <TabsTrigger value="code">دخول بالرمز</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -185,12 +183,14 @@ const Login = () => {
                   />
                 </div>
 
-                {/* لا يوجد اختيار للدور هنا، الدور يُضبط كـ pending تلقائيًا */}
-
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
                 </Button>
               </form>
+            </TabsContent>
+
+            <TabsContent value="code">
+              <CodeAccess />
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -199,5 +199,72 @@ const Login = () => {
   );
 };
 
+function CodeAccess() {
+  const [role, setRole] = useState<'student'|'teacher'>('student');
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // نمط: حرفين ثم رقمين (مثل AE10) — ملائم للبيانات التي أرسلتها
+  const CODE_REGEX = /^[A-Za-z]{2}[0-9]{2}$/i;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = code.trim().toUpperCase();
+
+    if (!CODE_REGEX.test(val)) {
+      return toast.error('الكود يجب أن يتكوّن من حرفين ثم رقمين، مثال: AE10');
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('raw_codes')
+        .select('id, person_full_name, role, code_plain')
+        .eq('code_plain', val)
+        .eq('role', role)
+        .limit(1)
+        .single();
+
+      if (error || !data) {
+        toast.error('الكود غير صالح أو غير موجود لهذا النوع');
+        setLoading(false);
+        return;
+      }
+
+      // صالح — توجه إلى صفحة عامة خاصة بالكود
+      navigate(`/public/${role}/${val}`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء التحقق من الكود');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      <div className="flex gap-4">
+        <label className={`px-4 py-2 rounded cursor-pointer ${role === 'student' ? 'bg-primary text-white' : 'bg-muted'}`}>
+          <input type="radio" name="role" value="student" checked={role === 'student'} onChange={() => setRole('student')} className="hidden" />
+          طالب
+        </label>
+        <label className={`px-4 py-2 rounded cursor-pointer ${role === 'teacher' ? 'bg-primary text-white' : 'bg-muted'}`}>
+          <input type="radio" name="role" value="teacher" checked={role === 'teacher'} onChange={() => setRole('teacher')} className="hidden" />
+          أستاذ
+        </label>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <Input placeholder="أدخل الكود (مثال: AE10)" value={code} onChange={(e)=>setCode(e.target.value)} maxLength={4} />
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? 'جاري التحقق...' : 'دخول بالرمز'}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export default Login;
+
 
