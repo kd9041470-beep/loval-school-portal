@@ -1,7 +1,8 @@
+// src/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://nytusadzlvtegtsynxuc.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55dHVzYWR6bHZ0ZWd0c3lueHVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTY2MzYsImV4cCI6MjA3NTc3MjYzNn0.iJYc7tae4sgeSTzG8m8whr_1W7gnbMJiPjMqNDfOHW0';
+const supabaseUrl = 'https://zqcpwetilpqvyitxmuvc.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxY3Bwd2V0aWxwcXZ5aXR4bXV2YyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzYxNjgwNTg1LCJleHAiOjIwNzc yNTY1ODV9.xqUmdJS9ymiI03djkfg9kDSlhipXxFiXHrjiOlP8j_s';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -9,8 +10,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   },
 });
-export type UserRole = 'admin' | 'teacher' | 'student' | 'pending';
 
+export type UserRole = 'admin' | 'teacher' | 'student' | 'pending';
 
 export interface Profile {
   id: string;
