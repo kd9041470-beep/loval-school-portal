@@ -1,3 +1,4 @@
+// src/App.tsx
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,11 +8,12 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import Activate from "./pages/Activate";
+import AccessByCode from "./pages/AccessByCode";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import NotFound from "./pages/NotFound";
-import AccessByCode from "./pages/AccessByCode";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +27,10 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/activate" element={<Activate />} />
+
+            {/* صفحة الوصول العامّة حسب الكود */}
+            <Route path="/public/:role/:code" element={<AccessByCode />} />
 
             {/* Admin Routes */}
             <Route
@@ -66,4 +72,5 @@ const App = () => {
 };
 
 export default App;
+
 
