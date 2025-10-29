@@ -205,38 +205,44 @@ function CodeAccess() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // نمط: حرفين ثم رقمين (مثل AE10) — ملائم للبيانات التي أرسلتها
-  const CODE_REGEX = /^[A-Za-z]{2}[0-9]{2}$/i;
+  // نمط: حرفين ثم رقمين مثل AE10, SN54
+  const CODE_REGEX = /^[A-Za-z]{2}[0-9]{2}$/;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const val = code.trim().toUpperCase();
 
     if (!CODE_REGEX.test(val)) {
-      return toast.error('الكود يجب أن يتكوّن من حرفين ثم رقمين، مثال: AE10');
+      toast.error('الكود يجب أن يتكوّن من حرفين ثم رقمين، مثال: AE10 أو SN54');
+      return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('raw_codes')
-        .select('id, person_full_name, role, code_plain')
-        .eq('code_plain', val)
-        .eq('role', role)
-        .limit(1)
-        .single();
+      // استدعاء الدالة الآمنة في الـ DB
+      const { data, error } = await supabase.rpc('login_with_code', {
+        user_code: val,
+        user_role: role
+      });
 
-      if (error || !data) {
-        toast.error('الكود غير صالح أو غير موجود لهذا النوع');
-        setLoading(false);
+      if (error) {
+        toast.error(error.message || 'فشل التحقق من الكود');
         return;
       }
 
-      // صالح — توجه إلى صفحة عامة خاصة بالكود
-      navigate(`/public/${role}/${val}`);
+      // RPC قد ترجع مصفوفة أو صف واحد
+      const person = Array.isArray(data) ? data[0] : data;
+
+      if (!person) {
+        toast.error('الكود أو الدور غير صحيح');
+        return;
+      }
+
+      // نجاح — التوجيه إلى صفحة خاصة بالكود/الدور
+      navigate(`/public/${person.role}/${person.code_plain}`);
     } catch (err: any) {
-      console.error(err);
-      toast.error('حدث خطأ أثناء التحقق من الكود');
+      console.error('RPC error', err);
+      toast.error('حدث خطأ أثناء عملية التحقق');
     } finally {
       setLoading(false);
     }
@@ -246,11 +252,11 @@ function CodeAccess() {
     <div className="space-y-4" dir="rtl">
       <div className="flex gap-4">
         <label className={`px-4 py-2 rounded cursor-pointer ${role === 'student' ? 'bg-primary text-white' : 'bg-muted'}`}>
-          <input type="radio" name="role" value="student" checked={role === 'student'} onChange={() => setRole('student')} className="hidden" />
+          <input type="radio" className="hidden" checked={role === 'student'} onChange={() => setRole('student')} />
           طالب
         </label>
         <label className={`px-4 py-2 rounded cursor-pointer ${role === 'teacher' ? 'bg-primary text-white' : 'bg-muted'}`}>
-          <input type="radio" name="role" value="teacher" checked={role === 'teacher'} onChange={() => setRole('teacher')} className="hidden" />
+          <input type="radio" className="hidden" checked={role === 'teacher'} onChange={() => setRole('teacher')} />
           أستاذ
         </label>
       </div>
